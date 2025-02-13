@@ -21,7 +21,6 @@ class BigQueryHandler:
         job_config: bigquery.QueryJobConfig | None = None,
         page_size: int | None = None,
     ) -> QueryJob | str:
-        
         try:
             query_job = self.client.query(sql, job_config=job_config)
             return query_job.result(timeout=timeout, page_size=page_size)
@@ -51,38 +50,40 @@ class BigQueryHandler:
 
         return pl.from_arrow(result.to_arrow())
 
-    def execute_query_log_errs(self,
+    def execute_query_log_errs(
+        self,
         sql: str,
         rows_to_insert: dict,
-        key_error_name:str,
-        key_datetime_name:str,
-        dataset_id:str,
-        table_id:str,
+        key_error_name: str,
+        key_datetime_name: str,
+        dataset_id: str,
+        table_id: str,
         timeout: int = 30,
         job_config: bigquery.QueryJobConfig | None = None,
-        page_size: int | None = None,) -> None:
+        page_size: int | None = None,
+    ) -> None:
         """
-            Executes a SQL query and logs any errors that occur during execution to a BigQuery table.
+        Executes a SQL query and logs any errors that occur during execution to a BigQuery table.
 
-            Args:
-                sql (str): The SQL query to be executed.
-                rows_to_insert (dict): The dictionary containing data to be inserted into the BigQuery table. This dictionary 
-                                    will be updated with the error information and current timestamp if an error occurs.
-                key_error_name (str): The key in `rows_to_insert` where the error message should be stored.
-                key_datetime_name (str): The key in `rows_to_insert` where the current timestamp should be stored.
-                dataset_id (str): The ID of the BigQuery dataset where the error log table is located.
-                table_id (str): The ID of the BigQuery table where error information should be inserted.
-                timeout (int, optional): The maximum amount of time in seconds the query is allowed to run before timing out.
-                                        Default is 30 seconds.
-                job_config (bigquery.QueryJobConfig, optional): Configuration options for the query job.
-                page_size (int | None, optional): The number of rows to fetch at a time during iteration.
+        Args:
+            sql (str): The SQL query to be executed.
+            rows_to_insert (dict): The dictionary containing data to be inserted into the BigQuery table. This dictionary
+                                will be updated with the error information and current timestamp if an error occurs.
+            key_error_name (str): The key in `rows_to_insert` where the error message should be stored.
+            key_datetime_name (str): The key in `rows_to_insert` where the current timestamp should be stored.
+            dataset_id (str): The ID of the BigQuery dataset where the error log table is located.
+            table_id (str): The ID of the BigQuery table where error information should be inserted.
+            timeout (int, optional): The maximum amount of time in seconds the query is allowed to run before timing out.
+                                    Default is 30 seconds.
+            job_config (bigquery.QueryJobConfig, optional): Configuration options for the query job.
+            page_size (int | None, optional): The number of rows to fetch at a time during iteration.
 
-            Raises:
-                Exception: If an error occurs during the execution of the SQL query, the error is caught and logged to the 
-                        specified BigQuery table.
+        Raises:
+            Exception: If an error occurs during the execution of the SQL query, the error is caught and logged to the
+                    specified BigQuery table.
 
-        """      
-        try: 
+        """
+        try:
             self.execute_query(sql, timeout, job_config, page_size)
         except Exception as error:
             current_time = datetime.now()
@@ -90,7 +91,22 @@ class BigQueryHandler:
             rows_to_insert[key_datetime_name] = current_time
             table_ref = self.client.dataset(dataset_id).table(table_id)
             self.client.insert_rows_json(table_ref, [rows_to_insert])
-            
+
+    def execute_query_in_order(
+        self,
+        list_order: list,
+        queries_dict: dict,
+        timeout: int = 30,
+        job_config: bigquery.QueryJobConfig | None = None,
+        page_size: int | None = None,
+    ) -> None:
+        for query_name in list_order:
+            try:
+                self.execute_query(
+                    queries_dict[query_name], timeout, job_config, page_size
+                )
+            except Exception as error:
+                raise error
 
     def export_table_to_storage(
         self,
