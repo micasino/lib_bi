@@ -3,6 +3,7 @@ import re
 import time
 import polars as pl
 import logging
+from datetime import datetime
 from google.cloud import bigquery
 from google.cloud.bigquery.client import QueryJob
 from concurrent.futures import ThreadPoolExecutor
@@ -48,6 +49,24 @@ class BigQueryHandler:
         result = query_job.result()
 
         return pl.from_arrow(result.to_arrow())
+
+    def execute_query_log_errs(self,
+        sql: str,
+        rows_to_insert: dict,
+        key_error_name:str,
+        dataset_id:str,
+        table_id:str,
+        timeout: int = 30,
+        job_config: bigquery.QueryJobConfig | None = None,
+        page_size: int | None = None,):
+        
+        try: 
+            self.execute_query(sql, timeout, job_config, page_size)
+        except Exception as error:
+            rows_to_insert[key_error_name] = error
+            table_ref = self.client.dataset(dataset_id).table(table_id)
+            self.client.insert_rows_json(table_ref, [rows_to_insert])
+            
 
     def export_table_to_storage(
         self,
