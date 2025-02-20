@@ -7,7 +7,9 @@ authors = [
     { name = "betzamica", email = "betzabeth.maestre@micasino.com" }
 ]
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "polars>=1.22.0",
+]
 
 [build-system]
 requires = ["hatchling"]
