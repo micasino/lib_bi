@@ -91,6 +91,8 @@ class GCPBigQueryHandler:
             rows_to_insert[key_datetime_name] = current_time
             table_ref = self.client.dataset(dataset_id).table(table_id)
             self.client.insert_rows_json(table_ref, [rows_to_insert])
+            
+            raise error
 
     def execute_query_in_order(
         self,
