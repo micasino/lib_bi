@@ -9,7 +9,7 @@ from google.cloud.bigquery.client import QueryJob
 from concurrent.futures import ThreadPoolExecutor
 
 
-class BigQueryHandler:
+class GCPBigQueryHandler:
     def __init__(self) -> None:
         self.client = bigquery.Client()
         logging
