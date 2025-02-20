@@ -3,7 +3,12 @@ name = "lib-bi"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12"
-dependencies = [
-    "polars>=1.22.0",
+authors = [
+    { name = "betzamica", email = "betzabeth.maestre@micasino.com" }
 ]
+requires-python = ">=3.12"
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
