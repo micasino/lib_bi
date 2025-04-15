@@ -1,0 +1,12 @@
+google-cloud-bigquery==3.29.0
+google_api_python_client==2.153.0
+google_auth_oauthlib==1.2.1
+gspread==6.1.4
+polars==1.22.0
+protobuf==5.29.3
+psycopg2-binary==2.9.10
+pysftp==0.2.9
+python-dotenv==1.0.1
+pandas==2.2.3
+db-dtypes==1.4.2
+pyarrow==19.0.1
