@@ -9,16 +9,11 @@ from gspread_dataframe import set_with_dataframe
 from google.oauth2 import service_account
 from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
 from googleapiclient.discovery import build
-from dotenv import load_dotenv, find_dotenv
-
-load_dotenv(find_dotenv())
 
 
 class SheetHandler:
-    def __init__(self):
-        self.service_account_info = json.loads(
-            os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"]
-        )
+    def __init__(self, credentials_env: str):
+        self.service_account_info = json.loads(credentials_env)
 
         self.creds = service_account.Credentials.from_service_account_info(
             self.service_account_info
@@ -139,12 +134,12 @@ class SheetHandler:
     def upload_csv_to_drive(self, file_path: str, folder_id: str) -> None:
         file_name = os.path.basename(file_path)
         file_metadata = {"name": file_name, "parents": [folder_id]}
-        
+
         # Search for existing file
         query = f"name='{file_name}' and '{folder_id}' in parents"
         results = self.service.files().list(q=query, fields="files(id)").execute()
         items = results.get("files", [])
-       
+
         # Delete existing file if found
         if items:
             for item in items:
@@ -158,4 +153,3 @@ class SheetHandler:
             .execute()
         )
         print(f"File ID: {file.get('id')} uploaded to folder ID: {folder_id}")
-        

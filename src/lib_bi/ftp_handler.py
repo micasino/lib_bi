@@ -2,27 +2,21 @@ import os
 import ftplib
 import logging
 import time
-from dotenv import load_dotenv, find_dotenv
 from concurrent.futures import ThreadPoolExecutor
 
-load_dotenv(find_dotenv())
-
-host = os.environ["host"]
-username = os.environ["user"]
-password = os.environ["passwd"]
 
 class FtpHandler:
-    def __init__(self):
+    def __init__(self, host: str, username: str, password: str):
         self.conn = ftplib.FTP(host)
         self.conn.login(user=username, passwd=password)
-        
+
     def upload_files(self, output_folder: str, filename: str) -> None:
         local_file_path = os.path.join(output_folder, filename)
 
         if os.path.isfile(local_file_path):
             try:
-                with open(local_file_path, 'rb') as file:
-                    self.conn.storbinary(f'STOR {filename}', file)
+                with open(local_file_path, "rb") as file:
+                    self.conn.storbinary(f"STOR {filename}", file)
                 logging.info(f"Uploaded: {filename}")
             except Exception as error:
                 logging.info(f"Couldn't upload: {filename}")
@@ -39,6 +33,7 @@ class FtpHandler:
 
         logging.info("All files loaded successfully :3")
         end = time.time()
-        execution_time = round((end - start)/60)
-        logging.info(f"All files were uploaded in parallel via FTP: {execution_time}min")
-
+        execution_time = round((end - start) / 60)
+        logging.info(
+            f"All files were uploaded in parallel via FTP: {execution_time}min"
+        )

@@ -2,19 +2,12 @@ import os
 import pysftp
 import logging
 import time
-from dotenv import load_dotenv, find_dotenv
 from concurrent.futures import ThreadPoolExecutor
-
-load_dotenv(find_dotenv())
-
-host = os.environ["host"]
-username = os.environ["user"]
-password = os.environ["passwd"]
 
 
 class SftpHandler:
-    def __init__(self):
-        self.conn = pysftp.Connection(host=host, username=username, password=password)
+    def __init__(self, host:str, username:str, password:str):
+        self.conn = pysftp.Connection(host, username, password)
 
     def upload_files(self, output_folder: str, filename: str) -> None:
         local_file_path = os.path.join(output_folder, filename)
@@ -40,5 +33,7 @@ class SftpHandler:
 
         logging.info("All files loaded successfully :3")
         end = time.time()
-        execution_time = round((end - start)/60)
-        logging.info(f"All files were upload in paralel by through sftp: {execution_time}min")
+        execution_time = round((end - start) / 60)
+        logging.info(
+            f"All files were upload in paralel by through sftp: {execution_time}min"
+        )
