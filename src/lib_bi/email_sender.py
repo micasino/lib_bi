@@ -8,6 +8,7 @@ from email.mime.application import MIMEApplication
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.errors import HttpError
+from google.auth.credentials import Credentials
 import pickle
 
 
@@ -41,7 +42,7 @@ def send_email(
         server.login(from_addr, email_password)
         server.sendmail(from_addr, to_addrs, message.as_string())
 
-def authorize(path_mail_json: str) -> str:
+def authorize(path_mail_json: str) -> Credentials:
     creds = None
     if os.path.exists("token.pickle"):
         with open("token.pickle", "rb") as token:

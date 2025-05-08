@@ -65,7 +65,7 @@ def get_all_sql_files(path_sql: str, remove_file: str = "") -> dict:
     """
     sqls_name = os.listdir(path_sql)
     if remove_file:
-        sqls_name = sqls_name.remove(remove_file)
+        sqls_name.remove(remove_file)
     sql_dict = {}
 
     for sql_file in sqls_name:

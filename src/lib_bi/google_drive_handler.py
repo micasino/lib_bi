@@ -11,7 +11,7 @@ from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
 from googleapiclient.discovery import build
 
 
-class SheetHandler:
+class GoogleDriveHandler:
     def __init__(self, credentials_env: str):
         self.service_account_info = json.loads(credentials_env)
 
@@ -108,12 +108,13 @@ class SheetHandler:
             df = pl.concat(dfs)
         except Exception as error:
             logging.error(error)
+            raise error
 
         return df
 
     def upload_df_polars_to_sheet(
         self, df_sheet: pl.DataFrame, sheet_id: str, sheet_name: str
-    ) -> tuple[pl.DataFrame, pl.DataFrame]:
+    ) -> None:
         try:
             sheet = self.gc.open_by_key(sheet_id).worksheet(sheet_name)
             try:

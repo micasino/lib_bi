@@ -1,18 +1,20 @@
 import io
 import re
-import time
 import polars as pl
 import logging
 from datetime import datetime
 from google.cloud import bigquery
-from google.cloud.bigquery.client import QueryJob
+from google.auth.credentials import Credentials
+from google.cloud.bigquery.table import RowIterator
+from google.cloud.bigquery.job.base import _AsyncJob
 from concurrent.futures import ThreadPoolExecutor
 
 
 class GCPBigQueryHandler:
-    def __init__(self) -> None:
-        self.client = bigquery.Client()
-        logging
+    def __init__(
+        self, project: str | None = None, credentials: Credentials | None = None
+    ) -> None:
+        self.client = bigquery.Client(project=project, credentials=credentials)
 
     def execute_query(
         self,
@@ -20,7 +22,7 @@ class GCPBigQueryHandler:
         timeout: int = 30,
         job_config: bigquery.QueryJobConfig | None = None,
         page_size: int | None = None,
-    ) -> QueryJob | str:
+    ) -> RowIterator:
         try:
             query_job = self.client.query(sql, job_config=job_config)
             return query_job.result(timeout=timeout, page_size=page_size)
@@ -31,7 +33,10 @@ class GCPBigQueryHandler:
             raise error
 
     def execute_query_to_df(
-        self, sql: str, timeout: int = 30, job_config: bigquery.QueryJobConfig = None
+        self,
+        sql: str,
+        timeout: int = 30,
+        job_config: bigquery.QueryJobConfig | None = None,
     ):
         try:
             result = self.execute_query(sql, timeout, job_config)
@@ -42,13 +47,6 @@ class GCPBigQueryHandler:
                 stack_info=True,
             )
             raise error
-
-    def execute_query_to_pl_df(self, sql: str) -> pl.DataFrame:
-        query_job = self.conn.query(sql)
-
-        result = query_job.result()
-
-        return pl.from_arrow(result.to_arrow())
 
     def execute_query_log_errs(
         self,
@@ -91,35 +89,19 @@ class GCPBigQueryHandler:
             rows_to_insert[key_datetime_name] = current_time
             table_ref = self.client.dataset(dataset_id).table(table_id)
             self.client.insert_rows_json(table_ref, [rows_to_insert])
-            
-            raise error
 
-    def execute_query_in_order(
-        self,
-        list_order: list,
-        queries_dict: dict,
-        timeout: int = 30,
-        job_config: bigquery.QueryJobConfig | None = None,
-        page_size: int | None = None,
-    ) -> None:
-        for query_name in list_order:
-            try:
-                self.execute_query(
-                    queries_dict[query_name], timeout, job_config, page_size
-                )
-            except Exception as error:
-                raise error
+            raise error
 
     def export_table_to_storage(
         self,
-        project,
-        dataset_id,
-        table_id,
-        gcs_path,
+        project: str,
+        dataset_id: str,
+        table_id: str,
+        gcs_path: str,
         location="southamerica-west1",
         format_table=bigquery.DestinationFormat.CSV,
         compression=bigquery.Compression.GZIP,
-    ):
+    )-> _AsyncJob:
         """
         Exports a BigQuery table to a specified Cloud Storage destination.
 
@@ -134,11 +116,9 @@ class GCPBigQueryHandler:
         Returns:
             ExtractJob.result: The result of the extract job.
         """
-
+        dataset_ref = bigquery.DatasetReference(project, dataset_id)
+        table_ref = dataset_ref.table(table_id)
         try:
-            dataset_ref = bigquery.DatasetReference(project, dataset_id)
-            table_ref = dataset_ref.table(table_id)
-
             # Job configuration
             job_config = bigquery.ExtractJobConfig()
             job_config.destination_format = format_table
@@ -181,7 +161,7 @@ class GCPBigQueryHandler:
         try:
             job.result()
         except Exception as error:
-            logging.error(f"Couldnt load the df to {path_table_name}: {error}")
+            logging.error(f"Could not load the df to {path_table_name}: {error}")
             raise error
 
     def execute_query_to_df_polars(
@@ -240,7 +220,6 @@ class GCPBigQueryHandler:
         proyect_id: str,
         dataset_id: str,
     ) -> None:
-        start = time.time()
         with ThreadPoolExecutor() as pool:
             pool.map(
                 lambda table_name: self.export_table_to_storage(
@@ -251,18 +230,13 @@ class GCPBigQueryHandler:
                 ),
                 tables_name,
             )
-        end = time.time()
-        execution_time = round(((end - start) / 60), 2)
-        logging.info(
-            f"The total time to load all tables to Google Cloud Storage (GCS) in parallel was: {execution_time}min"
-        )
 
     def check_and_create_table(
         self,
         dataset_id: str,
         table_id: str,
         schema: list[bigquery.SchemaField],
-        rows_to_insert: list[dict],
+        rows_to_insert: dict,
     ) -> None:
         table_ref = self.client.dataset(dataset_id).table(table_id)
 
