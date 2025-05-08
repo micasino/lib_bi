@@ -51,9 +51,9 @@ class GCPBigQueryHandler:
     def execute_query_log_errs(
         self,
         sql: str,
-        rows_to_insert: dict,
-        key_error_name: str,
-        key_datetime_name: str,
+        extra_columns_to_insert: dict,
+        column_error_name: str,
+        column_datetime_name: str,
         dataset_id: str,
         table_id: str,
         timeout: int = 30,
@@ -64,31 +64,42 @@ class GCPBigQueryHandler:
         Executes a SQL query and logs any errors that occur during execution to a BigQuery table.
 
         Args:
-            sql (str): The SQL query to be executed.
-            rows_to_insert (dict): The dictionary containing data to be inserted into the BigQuery table. This dictionary
-                                will be updated with the error information and current timestamp if an error occurs.
-            key_error_name (str): The key in `rows_to_insert` where the error message should be stored.
-            key_datetime_name (str): The key in `rows_to_insert` where the current timestamp should be stored.
-            dataset_id (str): The ID of the BigQuery dataset where the error log table is located.
-            table_id (str): The ID of the BigQuery table where error information should be inserted.
-            timeout (int, optional): The maximum amount of time in seconds the query is allowed to run before timing out.
-                                    Default is 30 seconds.
-            job_config (bigquery.QueryJobConfig, optional): Configuration options for the query job.
-            page_size (int | None, optional): The number of rows to fetch at a time during iteration.
+            sql (str): The SQL query string to be executed.
+            extra_columns_to_insert (dict): Additional column values to insert into the error log table.
+            column_error_name (str): Name of the column where the error message will be stored.
+            column_datetime_name (str): Name of the column where the timestamp of the error occurrence will be stored.
+            dataset_id (str): ID of the BigQuery dataset where the error log table resides.
+            table_id (str): ID of the BigQuery table where errors should be logged.
+            timeout (int, optional): Maximum execution time for the query in seconds. Defaults to 30.
+            job_config (bigquery.QueryJobConfig | None, optional): Configuration object for the query execution. Defaults to None.
+            page_size (int | None, optional): Pagination size for query results, if applicable. Defaults to None.
 
         Raises:
-            Exception: If an error occurs during the execution of the SQL query, the error is caught and logged to the
-                    specified BigQuery table.
+            Exception: Any error encountered during query execution is logged and then re-raised.
 
+        Ejemplo:
+            >>> extra_columns = {
+            ...     "user_id": 123,
+            ...     "operation": "data_update"
+            ... }
+            >>> execute_query_log_errs(
+            ...     sql="SELECT * FROM my_table",
+            ...     extra_columns_to_insert=extra_columns,
+            ...     column_error_name="error_message",
+            ...     column_datetime_name="error_timestamp",
+            ...     dataset_id="my_dataset",
+            ...     table_id="error_log"
+            ... )
         """
+
         try:
             self.execute_query(sql, timeout, job_config, page_size)
         except Exception as error:
             current_time = datetime.now()
-            rows_to_insert[key_error_name] = error
-            rows_to_insert[key_datetime_name] = current_time
+            extra_columns_to_insert[column_error_name] = str(error)
+            extra_columns_to_insert[column_datetime_name] = current_time
             table_ref = self.client.dataset(dataset_id).table(table_id)
-            self.client.insert_rows_json(table_ref, [rows_to_insert])
+            self.client.insert_rows_json(table_ref, [extra_columns_to_insert])
 
             raise error
 
@@ -101,7 +112,7 @@ class GCPBigQueryHandler:
         location="southamerica-west1",
         format_table=bigquery.DestinationFormat.CSV,
         compression=bigquery.Compression.GZIP,
-    )-> _AsyncJob:
+    ) -> _AsyncJob:
         """
         Exports a BigQuery table to a specified Cloud Storage destination.
 
