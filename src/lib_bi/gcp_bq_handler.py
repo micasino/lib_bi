@@ -7,6 +7,7 @@ from google.cloud import bigquery
 from google.auth.credentials import Credentials
 from google.cloud.bigquery.table import RowIterator
 from google.cloud.bigquery.job.base import _AsyncJob
+from google.cloud.bigquery.schema import SchemaField
 from concurrent.futures import ThreadPoolExecutor
 
 
@@ -59,7 +60,7 @@ class GCPBigQueryHandler:
         timeout: int = 30,
         job_config: bigquery.QueryJobConfig | None = None,
         page_size: int | None = None,
-    ) -> None:
+        table_log_schema : list[SchemaField] | None = None ) -> None:
         """
         Executes a SQL query and logs any errors that occur during execution to a BigQuery table.
 
@@ -99,7 +100,8 @@ class GCPBigQueryHandler:
             extra_columns_to_insert[column_error_name] = str(error)
             extra_columns_to_insert[column_datetime_name] = current_time
             table_ref = self.client.dataset(dataset_id).table(table_id)
-            self.client.insert_rows_json(table_ref, [extra_columns_to_insert])
+            
+            self.client.insert_rows(table_ref, [extra_columns_to_insert], selected_fields=table_log_schema)
 
             raise error
 
