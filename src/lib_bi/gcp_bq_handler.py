@@ -1,13 +1,13 @@
 import io
 import re
-import polars as pl
+import json
 import logging
+import polars as pl
 from datetime import datetime
 from google.cloud import bigquery
 from google.auth.credentials import Credentials
 from google.cloud.bigquery.table import RowIterator
 from google.cloud.bigquery.job.base import _AsyncJob
-from google.cloud.bigquery.schema import SchemaField
 from concurrent.futures import ThreadPoolExecutor
 
 
@@ -52,15 +52,14 @@ class GCPBigQueryHandler:
     def execute_query_log_errs(
         self,
         sql: str,
-        extra_columns_to_insert: dict,
-        column_error_name: str,
+        dict_to_insert: dict,
+        column_log_name: str,
         column_datetime_name: str,
         dataset_id: str,
         table_id: str,
         timeout: int = 30,
         job_config: bigquery.QueryJobConfig | None = None,
-        page_size: int | None = None,
-        table_log_schema : list[SchemaField] | None = None ) -> None:
+        page_size: int | None = None,) -> RowIterator:
         """
         Executes a SQL query and logs any errors that occur during execution to a BigQuery table.
 
@@ -94,14 +93,16 @@ class GCPBigQueryHandler:
         """
 
         try:
-            self.execute_query(sql, timeout, job_config, page_size)
+            result = self.execute_query(sql, timeout, job_config, page_size)
+           
+            return result
         except Exception as error:
             current_time = datetime.now()
-            extra_columns_to_insert[column_error_name] = str(error)
-            extra_columns_to_insert[column_datetime_name] = current_time
+            dict_to_insert[column_log_name] = error
+            dict_to_insert[column_datetime_name] = current_time
             table_ref = self.client.dataset(dataset_id).table(table_id)
-            
-            self.client.insert_rows(table_ref, [extra_columns_to_insert], selected_fields=table_log_schema)
+            json_to_insert = json.loads(json.dumps(dict_to_insert, default=str))
+            self.client.insert_rows_json(table_ref, [json_to_insert])
 
             raise error
 
